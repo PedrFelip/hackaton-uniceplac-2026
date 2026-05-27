@@ -6,7 +6,7 @@ App Android nativo que escaneia códigos de barras de alimentos e recomenda opç
 
 - **Scanner de código de barras** — leitura pela câmera usando ML Kit do Google
 - **Busca manual** — pesquisar por nome do produto ou código de barras
-- **Carrinho Inteligente (Dashboard)** — adição de produtos para formar um carrinho de compras, calculando a Média do Nutri-Score em um gráfico nativo, macros e alertas consolidados.
+- **Carrinho Inteligente** — adição de produtos para montar uma cesta de compras com média do Nutri-Score, soma de macros (açúcar, sódio, gordura saturada), alerta para diabéticos e remoção por swipe.
 - **Avaliação nutricional** — nota do produto (Nutri-Score) com dados gerais do alimento vindos da API
 - **Alertas para diabéticos** — indicação visual de risco baseada em nutrientes (ex: produtos com alto teor de açúcar)
 - **Recomendação de alternativas** — sugere produtos mais saudáveis na mesma categoria
@@ -19,7 +19,7 @@ App Android nativo que escaneia códigos de barras de alimentos e recomenda opç
 | **Home** | Campo de busca (nome ou código de barras) + botão para abrir scanner (Histórico) |
 | **Scanner** | Câmera com leitura de código de barras em tempo real |
 | **Resultado** | Dados nutricionais, nota, alertas diabéticos, botão "Adicionar ao Carrinho" e alternativas |
-| **Carrinho** | Dashboard com gráfico de Nutri-Score (A a E), soma de nutrientes, alerta para diabéticos e lista de itens com Swipe to Dismiss |
+| **Carrinho** | Dashboard com gauge de Nutri-Score médio (A a E), macros consolidados (açúcar, sódio, gordura saturada), alerta para diabéticos, lista de itens com imagem, badge de Nutri-Score e *Swipe to Dismiss*, além de botão "Finalizar Compra" que limpa o carrinho |
 | **Histórico** | Lista de produtos escaneados, persistidos localmente |
 
 ## Stack Técnica
@@ -63,8 +63,11 @@ API pública e gratuita, sem autenticação necessária.
 
 ## Regras de Negócio
 
-- **Média do Nutri-Score:** No carrinho, as letras são convertidas para números (A=1 a E=5), realiza-se a média aritmética, e o resultado final é convertido de volta para a Letra/Cor visualizada no gráfico.
-- **Alertas para diabéticos:** Produtos que possuírem quantidade de açúcar superior a `15g` a cada `100g` acionam uma *flag* de alto risco. O dashboard do carrinho consolida e avisa a quantidade exata de produtos que ultrapassam essa linha.
+- **Média do Nutri-Score:** No carrinho, as letras são convertidas para números (A=1 a E=5), realiza-se a média aritmética, e o resultado final é convertido de volta para a Letra/Cor visualizada no gauge.
+- **Soma de macros no carrinho:** Os valores de açúcar, sódio e gordura saturada de todos os itens adicionados são somados e exibidos no dashboard.
+- **Alertas para diabéticos:** Produtos que possuírem quantidade de açúcar superior a `15g` a cada `100g` acionam uma *flag* de alto risco. O carrinho consolida e avisa a quantidade exata de produtos que ultrapassam essa linha.
+- **Remoção de itens do carrinho:** O usuário pode deslizar um item da lista para removê-lo; as estatísticas do carrinho são recalculadas automaticamente.
+- **Finalização da compra:** O botão "Finalizar Compra" esvazia todo o carrinho.
 - **Armazenamento:** O histórico geral e o carrinho não dependem da nuvem. Eles utilizam o Room (banco de dados SQLite local).
 
 ## Como rodar

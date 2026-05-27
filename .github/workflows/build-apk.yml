@@ -2,10 +2,10 @@ name: Build APK & Publish to Web
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
     paths:
-      - 'app/NutriScan/**'
-      - '.github/workflows/build-apk.yml'
+      - "app/NutriScan/**"
+      - ".github/workflows/build-apk.yml"
   workflow_dispatch:
 
 jobs:
@@ -24,8 +24,8 @@ jobs:
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3

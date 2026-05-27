@@ -5,7 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -37,7 +38,7 @@ fun CartScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
                             tint = Color(0xFF81C784)
                         )
@@ -62,8 +63,13 @@ fun CartScreen(
                             contentColor = Color.Black
                         )
                     ) {
+                        Icon(
+                            imageVector = Icons.Filled.Done,
+                            contentDescription = null,
+                            modifier = Modifier.padding(end = 8.dp)
+                        )
                         Text(
-                            text = "✓ Finalizar Compra",
+                            text = "Finalizar Compra",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp
                         )
