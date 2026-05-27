@@ -1,15 +1,32 @@
 package com.nutriscan.app.data.repository
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import com.nutriscan.app.data.api.RateLimitException
 import com.nutriscan.app.data.api.RetrofitClient
+import com.nutriscan.app.data.local.AlternativesCache
+import com.nutriscan.app.data.local.AlternativesCacheDao
 import com.nutriscan.app.data.model.Product
 import com.nutriscan.app.data.model.ProductResponse
 
 /**
  * Repositório central de acesso aos dados de produtos.
  * Encapsula as chamadas à API e transforma as respostas em Result<T>.
+ *
+ * @param alternativesCacheDao DAO opcional para cache de alternativas.
+ *   Quando fornecido, buscas de alternativas mais saudáveis são cacheadas
+ *   por 7 dias, evitando requisições repetidas à API.
  */
-class ProductRepository {
+class ProductRepository(
+    private val alternativesCacheDao: AlternativesCacheDao? = null
+) {
     private val api = RetrofitClient.api
+    private val gson = Gson()
+
+    companion object {
+        private const val CACHE_TTL_DAYS = 7L
+        private const val CACHE_TTL_MILLIS = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000
+    }
 
     /**
      * Busca produtos por texto livre.
@@ -53,15 +70,40 @@ class ProductRepository {
      * Busca alternativas mais saudáveis para o produto dado.
      *
      * Estratégia:
-     * 1. Se o produto tem categoria, usa a primeira categoria como termo de busca
-     * 2. Se não tem categoria, extrai palavras-chave do nome do produto
-     * 3. Filtra resultados com Nutri-Score melhor que o produto atual
-     * 4. Ordena do melhor (A) para o pior e limita a 5 resultados
+     * 1. Verifica cache Room (TTL de 7 dias)
+     * 2. Se cache hit válido, retorna os dados cacheados
+     * 3. Se cache miss/expirado, busca na API
+     * 4. Salva resultado no cache para futuras consultas
+     * 5. Se rate limit for atingido, retorna lista vazia silenciosamente
+     *    (alternativas são nice-to-have, não devem bloquear a UX)
      *
      * @param product Produto atual para comparar
      * @return Lista de até 5 produtos com Nutri-Score melhor
      */
     suspend fun getHealthierAlternatives(product: Product): Result<List<Product>> {
+        val barcode = product.code
+        if (barcode.isNullOrBlank()) return Result.success(emptyList())
+
+        // Limpa entradas de cache expiradas antes de consultar
+        cleanExpiredAlternatives()
+
+        // 1. Verifica cache
+        alternativesCacheDao?.let { dao ->
+            try {
+                val cached = dao.getByBarcode(barcode)
+                if (cached != null) {
+                    val age = System.currentTimeMillis() - cached.cachedAt
+                    if (age < CACHE_TTL_MILLIS) {
+                        val type = object : TypeToken<List<Product>>() {}.type
+                        val products: List<Product> = gson.fromJson(cached.alternativesJson, type)
+                        return Result.success(products)
+                    }
+                }
+            } catch (_: Exception) {
+                // Ignora erro de cache e prossegue para API
+            }
+        }
+
         val currentGrade = product.nutriscoreGrade
 
         // Define o termo de busca: prioridade para categoria, senão usa palavras-chave do nome
@@ -81,9 +123,51 @@ class ProductRepository {
                 .filter { isHealthier(it.nutriscoreGrade, currentGrade) }
                 .sortedBy { nutriscoreRank(it.nutriscoreGrade) }
                 .take(5)
+
+            // Salva no cache
+            saveAlternativesCache(barcode, alternatives)
+
             Result.success(alternatives)
+        } catch (e: RateLimitException) {
+            // Alternativas são nice-to-have: rate limit não deve quebrar a tela
+            Result.success(emptyList())
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    /**
+     * Serializa e salva a lista de alternativas no cache Room.
+     */
+    private suspend fun saveAlternativesCache(barcode: String, alternatives: List<Product>) {
+        alternativesCacheDao?.let { dao ->
+            try {
+                val json = gson.toJson(alternatives)
+                dao.upsert(
+                    AlternativesCache(
+                        parentBarcode = barcode,
+                        alternativesJson = json,
+                        cachedAt = System.currentTimeMillis()
+                    )
+                )
+            } catch (_: Exception) {
+                // Falha silenciosa no cache não deve quebrar o fluxo
+            }
+        }
+    }
+
+    /**
+     * Remove entradas de cache de alternativas com mais de 7 dias.
+     * Chamado automaticamente antes de consultar o cache.
+     */
+    private suspend fun cleanExpiredAlternatives() {
+        alternativesCacheDao?.let { dao ->
+            try {
+                val expireTime = System.currentTimeMillis() - CACHE_TTL_MILLIS
+                dao.cleanExpired(expireTime)
+            } catch (_: Exception) {
+                // Falha silenciosa no cleanup não deve quebrar o fluxo
+            }
         }
     }
 

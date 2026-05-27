@@ -8,7 +8,7 @@ import okhttp3.Response
  * para proteger contra ban de IP na API Open Food Facts.
  *
  * Limites aplicados:
- * - Produto (GET /api/v*/product/*): 15 requisições por minuto
+ * - Produto (GET /api/v2/product/...): 15 requisições por minuto
  * - Busca (GET /cgi/search.pl): 10 requisições por minuto
  *
  * Quando o limite é atingido, lança [RateLimitException] com mensagem

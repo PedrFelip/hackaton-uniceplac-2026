@@ -18,11 +18,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.nutriscan.app.ui.viewmodel.CartViewModel
 import kotlinx.coroutines.launch
 import androidx.compose.material3.Card
@@ -38,19 +44,22 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.nutriscan.app.data.diabetic.DiabetesRiskCalculator
+import com.nutriscan.app.data.local.DiabeticPreference
 import com.nutriscan.app.data.model.Nutriments
 import com.nutriscan.app.data.model.Product
+import com.nutriscan.app.ui.components.DiabeticAlertCard
 import com.nutriscan.app.ui.viewmodel.ProductDetailViewModel
 
 /** Retorna a cor correspondente ao grau do Nutri-Score (A=verde, E=vermelho). */
@@ -89,9 +98,14 @@ fun ProductDetailScreen(
     viewModel: ProductDetailViewModel = viewModel(),
     cartViewModel: CartViewModel = viewModel()
 ) {
+    val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+
+    // Preferência e estado do modo diabético
+    val diabeticPreference = remember { DiabeticPreference(context) }
+    var isDiabeticMode by rememberSaveable { mutableStateOf(diabeticPreference.isDiabeticModeEnabled()) }
 
     // Carrega o produto quando a tela é composta com um novo barcode
     LaunchedEffect(barcode) {
@@ -106,6 +120,26 @@ fun ProductDetailScreen(
                 navigationIcon = {
                     IconButton(onClick = onBackClick) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+                actions = {
+                    // Toggle modo diabético
+                    IconButton(
+                        onClick = {
+                            isDiabeticMode = !isDiabeticMode
+                            diabeticPreference.setDiabeticModeEnabled(isDiabeticMode)
+                            if (isDiabeticMode) {
+                                coroutineScope.launch {
+                                    snackbarHostState.showSnackbar("Modo diabético ativado")
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            imageVector = if (isDiabeticMode) Icons.Filled.Medication else Icons.Outlined.Medication,
+                            contentDescription = if (isDiabeticMode) "Desativar modo diabético" else "Ativar modo diabético",
+                            tint = if (isDiabeticMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             )
@@ -157,10 +191,15 @@ fun ProductDetailScreen(
                 }
             }
             state.product != null -> {
+                val diabeticResult = remember(state.product) {
+                    DiabetesRiskCalculator.calculate(state.product!!)
+                }
                 ProductDetailContent(
                     product = state.product!!,
                     alternatives = state.alternatives,
                     isLoadingAlternatives = state.isLoadingAlternatives,
+                    isDiabeticMode = isDiabeticMode,
+                    diabeticResult = diabeticResult,
                     onProductClick = onProductClick,
                     modifier = Modifier.padding(innerPadding)
                 )
@@ -182,6 +221,8 @@ private fun ProductDetailContent(
     product: Product,
     alternatives: List<Product>,
     isLoadingAlternatives: Boolean,
+    isDiabeticMode: Boolean,
+    diabeticResult: com.nutriscan.app.data.diabetic.DiabetesRiskResult,
     onProductClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -269,6 +310,12 @@ private fun ProductDetailContent(
         }
 
         Spacer(modifier = Modifier.height(16.dp))
+
+        // Alerta para diabéticos (só exibe se modo estiver ativado)
+        if (isDiabeticMode) {
+            DiabeticAlertCard(result = diabeticResult)
+            Spacer(modifier = Modifier.height(16.dp))
+        }
 
         // Tabela nutricional (apenas se houver dados de nutriments)
         product.nutriments?.let { nutriments ->

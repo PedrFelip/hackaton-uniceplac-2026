@@ -4,6 +4,8 @@ import android.app.Application
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nutriscan.app.data.api.RateLimitException
+import com.nutriscan.app.data.local.AppDatabase
 import com.nutriscan.app.data.model.Product
 import com.nutriscan.app.data.repository.HistoryRepository
 import com.nutriscan.app.data.repository.ProductRepository
@@ -23,7 +25,8 @@ data class ProductDetailUiState(
 )
 
 class ProductDetailViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = ProductRepository()
+    private val alternativesCacheDao = AppDatabase.getInstance(application).alternativesCacheDao()
+    private val repository = ProductRepository(alternativesCacheDao)
     private val historyRepository = HistoryRepository(application)
 
     private val _state = MutableStateFlow(ProductDetailUiState())
@@ -57,8 +60,12 @@ class ProductDetailViewModel(application: Application) : AndroidViewModel(applic
                 loadAlternatives(product)
             }
             .onFailure { e ->
+                val errorMessage = when (e) {
+                    is RateLimitException -> e.message
+                    else -> e.message ?: "Erro ao carregar produto"
+                }
                 _state.value = _state.value.copy(
-                    isLoading = false, error = e.message ?: "Erro ao carregar produto"
+                    isLoading = false, error = errorMessage
                 )
             }
     }
@@ -80,7 +87,7 @@ class ProductDetailViewModel(application: Application) : AndroidViewModel(applic
     private fun loadAlternatives(product: Product) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingAlternatives = true)
-            delay(1000)
+            delay(350)
             repository.getHealthierAlternatives(product)
                 .onSuccess { alternatives ->
                     _state.value = _state.value.copy(alternatives = alternatives, isLoadingAlternatives = false)
