@@ -1,6 +1,0 @@
-Para enviar uma imagem, você pode simplesmente arrastar o arquivo de imagem gerado pelo Stitch (PNG, JPG) diretamente para o terminal do opencode se o seu emulador/terminal suportar "drag and drop".
-
-Alternativamente, como estou no seu ambiente local, você pode salvar a imagem na pasta do projeto e me passar o caminho dela! Por exemplo:
-"A imagem está em ./mockup-stitch.png"
-
-Eu consigo ler imagens do disco se você me disser onde elas estão!
