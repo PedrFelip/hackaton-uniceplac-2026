@@ -43,14 +43,14 @@ jobs:
         working-directory: app/NutriScan
         run: chmod +x gradlew
 
-      - name: Build Release APK
+      - name: Build Debug APK
         working-directory: app/NutriScan
-        run: ./gradlew assembleRelease
+        run: ./gradlew assembleDebug
 
       - name: Copy APK to web downloads
         run: |
           mkdir -p web/public/downloads
-          cp app/NutriScan/app/build/outputs/apk/release/app-release-unsigned.apk web/public/downloads/nutriscan.apk
+          cp app/NutriScan/app/build/outputs/apk/debug/app-debug.apk web/public/downloads/nutriscan.apk
 
       - name: Commit and push APK
         run: |
