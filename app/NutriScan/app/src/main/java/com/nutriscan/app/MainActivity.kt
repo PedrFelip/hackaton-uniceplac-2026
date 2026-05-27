@@ -28,6 +28,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import androidx.compose.material.icons.filled.ShoppingCart
+import com.nutriscan.app.ui.screens.CartScreen
 import com.nutriscan.app.ui.screens.HistoryScreen
 import com.nutriscan.app.ui.screens.ProductDetailScreen
 import com.nutriscan.app.ui.screens.ScannerScreen
@@ -43,6 +45,7 @@ sealed class Screen(val route: String, val label: String, val icon: ImageVector)
     data object Home : Screen("home", "Histórico", Icons.AutoMirrored.Filled.List)
     data object Search : Screen("search", "Pesquisar", Icons.Filled.Search)
     data object Scan : Screen("scan", "Escanear", Icons.Filled.QrCodeScanner)
+    data object Cart : Screen("cart", "Carrinho", Icons.Filled.ShoppingCart)
     data object ProductDetail : Screen("product/{barcode}", "Detalhe", Icons.Filled.Search) {
         fun createRoute(barcode: String) = "product/$barcode"
     }
@@ -68,7 +71,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun NutriScanApp() {
     val navController = rememberNavController()
-    val screens = listOf(Screen.Home, Screen.Search, Screen.Scan)
+    val screens = listOf(Screen.Home, Screen.Search, Screen.Scan, Screen.Cart)
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -134,6 +137,11 @@ fun NutriScanApp() {
                     onBarcodeScanned = { barcode ->
                         navController.navigate(Screen.ProductDetail.createRoute(barcode))
                     }
+                )
+            }
+            composable(Screen.Cart.route) {
+                CartScreen(
+                    onNavigateBack = { navController.popBackStack() }
                 )
             }
             // Detalhe do produto: recebe barcode como argumento da rota

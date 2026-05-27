@@ -17,6 +17,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AddShoppingCart
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.nutriscan.app.ui.viewmodel.CartViewModel
+import kotlinx.coroutines.launch
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,9 +86,12 @@ fun ProductDetailScreen(
     barcode: String,
     onBackClick: () -> Unit = {},
     onProductClick: (String) -> Unit = {},
-    viewModel: ProductDetailViewModel = viewModel()
+    viewModel: ProductDetailViewModel = viewModel(),
+    cartViewModel: CartViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
 
     // Carrega o produto quando a tela é composta com um novo barcode
     LaunchedEffect(barcode) {
@@ -88,6 +99,7 @@ fun ProductDetailScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Detalhes do Produto") },
@@ -97,6 +109,30 @@ fun ProductDetailScreen(
                     }
                 }
             )
+        },
+        floatingActionButton = {
+            if (state.product != null) {
+                FloatingActionButton(
+                    onClick = {
+                        state.product?.code?.let {
+                            cartViewModel.addToCart(it)
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Produto adicionado ao carrinho")
+                            }
+                        } ?: run {
+                            // Fallback se code for nulo
+                            cartViewModel.addToCart(barcode)
+                            coroutineScope.launch {
+                                snackbarHostState.showSnackbar("Produto adicionado ao carrinho")
+                            }
+                        }
+                    },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(Icons.Default.AddShoppingCart, contentDescription = "Adicionar ao Carrinho")
+                }
+            }
         }
     ) { innerPadding ->
         when {

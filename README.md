@@ -6,8 +6,9 @@ App Android nativo que escaneia códigos de barras de alimentos e recomenda opç
 
 - **Scanner de código de barras** — leitura pela câmera usando ML Kit do Google
 - **Busca manual** — pesquisar por nome do produto ou código de barras
+- **Carrinho Inteligente (Dashboard)** — adição de produtos para formar um carrinho de compras, calculando a Média do Nutri-Score em um gráfico nativo, macros e alertas consolidados.
 - **Avaliação nutricional** — nota do produto (Nutri-Score) com dados gerais do alimento vindos da API
-- **Alertas para diabéticos** — indicação visual de risco baseada em nutrientes (regra a definir)
+- **Alertas para diabéticos** — indicação visual de risco baseada em nutrientes (ex: produtos com alto teor de açúcar)
 - **Recomendação de alternativas** — sugere produtos mais saudáveis na mesma categoria
 - **Histórico de scans** — lista de produtos consultados anteriormente, salva localmente
 
@@ -15,9 +16,10 @@ App Android nativo que escaneia códigos de barras de alimentos e recomenda opç
 
 | Tela | Descrição |
 |------|-----------|
-| **Home** | Campo de busca (nome ou código de barras) + botão para abrir scanner |
+| **Home** | Campo de busca (nome ou código de barras) + botão para abrir scanner (Histórico) |
 | **Scanner** | Câmera com leitura de código de barras em tempo real |
-| **Resultado** | Dados nutricionais, nota, alertas diabéticos e alternativas recomendadas |
+| **Resultado** | Dados nutricionais, nota, alertas diabéticos, botão "Adicionar ao Carrinho" e alternativas |
+| **Carrinho** | Dashboard com gráfico de Nutri-Score (A a E), soma de nutrientes, alerta para diabéticos e lista de itens com Swipe to Dismiss |
 | **Histórico** | Lista de produtos escaneados, persistidos localmente |
 
 ## Stack Técnica
@@ -61,7 +63,9 @@ API pública e gratuita, sem autenticação necessária.
 
 ## Regras de Negócio
 
-> **Pendente de definição:** fórmula/reenegra de avaliação nutricional e alertas para diabéticos será definida em iteração futura.
+- **Média do Nutri-Score:** No carrinho, as letras são convertidas para números (A=1 a E=5), realiza-se a média aritmética, e o resultado final é convertido de volta para a Letra/Cor visualizada no gráfico.
+- **Alertas para diabéticos:** Produtos que possuírem quantidade de açúcar superior a `15g` a cada `100g` acionam uma *flag* de alto risco. O dashboard do carrinho consolida e avisa a quantidade exata de produtos que ultrapassam essa linha.
+- **Armazenamento:** O histórico geral e o carrinho não dependem da nuvem. Eles utilizam o Room (banco de dados SQLite local).
 
 ## Como rodar
 
